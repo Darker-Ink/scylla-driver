@@ -1,0 +1,57 @@
+{
+	"name": "scylla-driver",
+	"description": "Scylla driver is a cassandra-driver fork with a overall huge rewrite making code more readable and maintainable. Its a drop in replacement and you should not need to change anything in your code.",
+	"version": "0.0.6",
+	"main": "dist/index.js",
+	"dependencies": {},
+	"devDependencies": {
+		"@commitlint/cli": "^17.7.1",
+		"@commitlint/config-angular": "^17.7.0",
+		"cross-env": "^7.0.3",
+		"eslint": "^8.47.0",
+		"eslint-config-neon": "^0.1.47",
+		"eslint-formatter-pretty": "^5.0.0",
+		"husky": "^8.0.3",
+		"lint-staged": "^14.0.0",
+		"prettier": "^3.0.2",
+		"tsup": "^7.2.0"
+	},
+	"scripts": {
+		"lint": "prettier --check . && cross-env TIMING=1 eslint src --ext .js,.ts --format=pretty",
+		"format": "prettier --write . && cross-env TIMING=1 eslint src --ext .js,.ts --fix --format=pretty"
+	},
+	"keywords": [
+		"cassandra",
+		"cql",
+		"cql3",
+		"connection",
+		"gremlin",
+		"datastax",
+		"nosql",
+		"driver",
+		"database",
+		"dse",
+		"graph",
+		"graphdb",
+		"scylla",
+		"scylladb",
+		"scylla-driver"
+	],
+	"engines": {
+		"node": "^18.0.0",
+		"npm": "^8.0.0"
+	},
+	"contributors": [
+		{
+			"email": "darkerinker@gmail.com",
+			"name": "DarkerInk"
+		}
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Darker-Ink/scylla-driver.git"
+	},
+	"packageManager": "yarn@3.3.0",
+	"type": "module"
+}
