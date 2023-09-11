@@ -11,10 +11,6 @@ pids/
 *.pid
 *.seed
 
-# Configs
-Constants.ts
-Config.ts
-
 # Distribution
 dist/
 
@@ -27,11 +23,7 @@ dist/
 .turbo
 .npmrc
 tsconfig.tsbuildinfo
-scripts/
 bin/
-
-# Developer Tests
-dtests/
 
 # Yarn
 .pnp.*
@@ -40,7 +32,3 @@ dtests/
 # Cache
 .prettiercache
 .eslintcache
-
-# Old Stuff
-oldApiRoutes/
-old/

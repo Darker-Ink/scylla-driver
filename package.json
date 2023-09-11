@@ -3,10 +3,10 @@
 	"description": "Scylla driver is a cassandra-driver fork with a overall huge rewrite making code more readable and maintainable. Its a drop in replacement and you should not need to change anything in your code.",
 	"version": "0.0.6",
 	"main": "dist/index.js",
-	"dependencies": {},
 	"devDependencies": {
 		"@commitlint/cli": "^17.7.1",
 		"@commitlint/config-angular": "^17.7.0",
+		"@types/node": "^20.6.0",
 		"cross-env": "^7.0.3",
 		"eslint": "^8.47.0",
 		"eslint-config-neon": "^0.1.47",
