@@ -1,49 +1,40 @@
-const util = require('node:util');
-const Long = require('long');
-const errors = require('../errors');
-const utils = require('../utils');
-const protocolVersion = require('./protocol-version');
-const TimeUuid = require('./time-uuid');
-const Uuid = require('./uuid');
-
-/**
- * @module types
- */
-/**
- * Long constructor, wrapper of the internal library used: {@link https://github.com/dcodeIO/long.js Long.js}.
- *
- * @constructor
- */
+/* eslint-disable prefer-named-capture-group */
+import { Buffer } from 'node:buffer';
+import Long from 'long';
+// import errors from '../errors';
+// import utils from '../utils';
+import protocolVersion from './protocolVersion.js';
+// import TimeUuid from './time-uuid';
+// import Uuid from './uuid';
 
 
-/**
- * Consistency levels
- *
- * @type {object}
- * @property {number} any Writing: A write must be written to at least one node. If all replica nodes for the given row key are down, the write can still succeed after a hinted handoff has been written. If all replica nodes are down at write time, an ANY write is not readable until the replica nodes for that row have recovered.
- * @property {number} one Returns a response from the closest replica, as determined by the snitch.
- * @property {number} two Returns the most recent data from two of the closest replicas.
- * @property {number} three Returns the most recent data from three of the closest replicas.
- * @property {number} quorum Reading: Returns the record with the most recent timestamp after a quorum of replicas has responded regardless of data center. Writing: A write must be written to the commit log and memory table on a quorum of replica nodes.
- * @property {number} all Reading: Returns the record with the most recent timestamp after all replicas have responded. The read operation will fail if a replica does not respond. Writing: A write must be written to the commit log and memory table on all replica nodes in the cluster for that row.
- * @property {number} localQuorum Reading: Returns the record with the most recent timestamp once a quorum of replicas in the current data center as the coordinator node has reported. Writing: A write must be written to the commit log and memory table on a quorum of replica nodes in the same data center as the coordinator node. Avoids latency of inter-data center communication.
- * @property {number} eachQuorum Reading: Returns the record once a quorum of replicas in each data center of the cluster has responded. Writing: Strong consistency. A write must be written to the commit log and memtable on a quorum of replica nodes in all data centers.
- * @property {number} serial Achieves linearizable consistency for lightweight transactions by preventing unconditional updates.
- * @property {Number} localSerial Same as serial but confined to the data center. A write must be written conditionally to the commit log and memtable on a quorum of replica nodes in the same data center.
- * @property {Number} localOne Similar to One but only within the DC the coordinator is in.
- */
-const consistencies = {
-  any: 0x00,
-  one: 0x01,
-  two: 0x02,
-  three: 0x03,
-  quorum: 0x04,
-  all: 0x05,
-  localQuorum: 0x06,
-  eachQuorum: 0x07,
-  serial: 0x08,
-  localSerial: 0x09,
-  localOne: 0x0a
+interface CassandraConsistencyLevels {
+    all: number;
+    any: number;
+    eachQuorum: number;
+    localOne: number;
+    localQuorum: number;
+    localSerial: number;
+    one: number;
+    quorum: number;
+    serial: number;
+    three: number;
+    two: number;
+}
+
+
+const consistencies: CassandraConsistencyLevels = {
+    any: 0x00,
+    one: 0x01,
+    two: 0x02,
+    three: 0x03,
+    quorum: 0x04,
+    all: 0x05,
+    localQuorum: 0x06,
+    eachQuorum: 0x07,
+    serial: 0x08,
+    localSerial: 0x09,
+    localOne: 0x0a
 };
 
 /**
@@ -51,159 +42,138 @@ const consistencies = {
  *
  * @type {object}
  */
-const consistencyToString = {};
-consistencyToString[consistencies.any] = 'ANY';
-consistencyToString[consistencies.one] = 'ONE';
-consistencyToString[consistencies.two] = 'TWO';
-consistencyToString[consistencies.three] = 'THREE';
-consistencyToString[consistencies.quorum] = 'QUORUM';
-consistencyToString[consistencies.all] = 'ALL';
-consistencyToString[consistencies.localQuorum] = 'LOCAL_QUORUM';
-consistencyToString[consistencies.eachQuorum] = 'EACH_QUORUM';
-consistencyToString[consistencies.serial] = 'SERIAL';
-consistencyToString[consistencies.localSerial] = 'LOCAL_SERIAL';
-consistencyToString[consistencies.localOne] = 'LOCAL_ONE';
-
-/**
- * CQL data types
- *
- * @type {object}
- * @property {number} custom A custom type.
- * @property {number} ascii ASCII character string.
- * @property {number} bigint 64-bit signed long.
- * @property {number} blob Arbitrary bytes (no validation).
- * @property {number} boolean true or false.
- * @property {number} counter Counter column (64-bit signed value).
- * @property {number} decimal Variable-precision decimal.
- * @property {number} double 64-bit IEEE-754 floating point.
- * @property {number} float 32-bit IEEE-754 floating point.
- * @property {Number} int 32-bit signed integer.
- * @property {Number} text UTF8 encoded string.
- * @property {Number} timestamp A timestamp.
- * @property {Number} uuid Type 1 or type 4 UUID.
- * @property {Number} varchar UTF8 encoded string.
- * @property {Number} varint Arbitrary-precision integer.
- * @property {Number} timeuuid  Type 1 UUID.
- * @property {Number} inet An IP address. It can be either 4 bytes long (IPv4) or 16 bytes long (IPv6).
- * @property {Number} date A date without a time-zone in the ISO-8601 calendar system.
- * @property {Number} time A value representing the time portion of the day.
- * @property {Number} smallint 16-bit two's complement integer.
- * @property {Number} tinyint 8-bit two's complement integer.
- * @property {Number} list A collection of elements.
- * @property {Number} map Key/value pairs.
- * @property {Number} set A collection that contains no duplicate elements.
- * @property {Number} udt User-defined type.
- * @property {Number} tuple A sequence of values.
- */
-const dataTypes = {
-  custom: 0x0000,
-  ascii: 0x0001,
-  bigint: 0x0002,
-  blob: 0x0003,
-  boolean: 0x0004,
-  counter: 0x0005,
-  decimal: 0x0006,
-  double: 0x0007,
-  float: 0x0008,
-  int: 0x0009,
-  text: 0x000a,
-  timestamp: 0x000b,
-  uuid: 0x000c,
-  varchar: 0x000d,
-  varint: 0x000e,
-  timeuuid: 0x000f,
-  inet: 0x0010,
-  date: 0x0011,
-  time: 0x0012,
-  smallint: 0x0013,
-  tinyint: 0x0014,
-  duration: 0x0015,
-  list: 0x0020,
-  map: 0x0021,
-  set: 0x0022,
-  udt: 0x0030,
-  tuple: 0x0031,
-  /**
-   * Returns the typeInfo of a given type name
-   *
-   * @param name
-   * @returns {{code: number, info: * | object}}
-   */
-  getByName (name) {
-    name = name.toLowerCase();
-    if (name.indexOf('<') > 0) {
-      const listMatches = /^(list|set)<(.+)>$/.exec(name);
-      if (listMatches) {
-        return { code: this[listMatches[1]], info: this.getByName(listMatches[2]) };
-      }
-
-      const mapMatches = /^(map)< *(.+) *, *(.+)>$/.exec(name);
-      if (mapMatches) {
-        return { code: this[mapMatches[1]], info: [this.getByName(mapMatches[2]), this.getByName(mapMatches[3])] };
-      }
-
-      const udtMatches = /^(udt)<(.+)>$/.exec(name);
-      if (udtMatches) {
-        // udt name as raw string
-        return { code: this[udtMatches[1]], info: udtMatches[2] };
-      }
-
-      const tupleMatches = /^(tuple)<(.+)>$/.exec(name);
-      if (tupleMatches) {
-        // tuple info as an array of types
-        return {
-          code: this[tupleMatches[1]], info: tupleMatches[2].split(',').map(function (x) {
-            return this.getByName(x.trim());
-          }, this)
-        };
-      }
-    }
-
-    const typeInfo = { code: this[name], info: null };
-    if (typeof typeInfo.code !== 'number') {
-      throw new TypeError('Data type with name ' + name + ' not valid');
-    }
-
-    return typeInfo;
-  }
+const consistencyToString = {
+    [consistencies.any]: 'ANY',
+    [consistencies.one]: 'ONE',
+    [consistencies.two]: 'TWO',
+    [consistencies.three]: 'THREE',
+    [consistencies.quorum]: 'QUORUM',
+    [consistencies.all]: 'ALL',
+    [consistencies.localQuorum]: 'LOCAL_QUORUM',
+    [consistencies.eachQuorum]: 'EACH_QUORUM',
+    [consistencies.serial]: 'SERIAL',
+    [consistencies.localSerial]: 'LOCAL_SERIAL',
+    [consistencies.localOne]: 'LOCAL_ONE'
 };
 
-/**
- * Map of Data types by code
- *
- * @internal
- * @private
- */
-const _dataTypesByCode = (function () {
-  const result = {};
-  for (const key in dataTypes) {
-    if (!dataTypes.hasOwnProperty(key)) {
-      continue;
+interface DataTypes {
+    ascii: number;
+    bigint: number;
+    blob: number;
+    boolean: number;
+    counter: number;
+    custom: number;
+    date: number;
+    decimal: number;
+    double: number;
+    duration: number;
+    float: number;
+    inet: number;
+    int: number;
+    list: number;
+    map: number;
+    set: number;
+    smallint: number;
+    text: number;
+    time: number;
+    timestamp: number;
+    timeuuid: number;
+    tinyint: number;
+    tuple: number;
+    udt: number;
+    uuid: number;
+    varchar: number;
+    varint: number;
+}
+
+const dataTypes: DataTypes = {
+    custom: 0x0000,
+    ascii: 0x0001,
+    bigint: 0x0002,
+    blob: 0x0003,
+    boolean: 0x0004,
+    counter: 0x0005,
+    decimal: 0x0006,
+    double: 0x0007,
+    float: 0x0008,
+    int: 0x0009,
+    text: 0x000a,
+    timestamp: 0x000b,
+    uuid: 0x000c,
+    varchar: 0x000d,
+    varint: 0x000e,
+    timeuuid: 0x000f,
+    inet: 0x0010,
+    date: 0x0011,
+    time: 0x0012,
+    smallint: 0x0013,
+    tinyint: 0x0014,
+    duration: 0x0015,
+    list: 0x0020,
+    map: 0x0021,
+    set: 0x0022,
+    udt: 0x0030,
+    tuple: 0x0031
+};
+
+const getByName = (name: string): { code: number, info: any; } => {
+    const lowercaseName = name.toLowerCase();
+    if (lowercaseName.indexOf('<') > 0) {
+        const listMatches = /^(list|set)<(.+)>$/.exec(lowercaseName);
+        const mapMatches = /^(map)< *(.+) *, *(.+)>$/.exec(lowercaseName);
+        const udtMatches = /^(udt)<(.+)>$/.exec(lowercaseName);
+        const tupleMatches = /^(tuple)<(.+)>$/.exec(lowercaseName);
+
+        if (listMatches?.[2] !== undefined) {
+            return {
+                code: dataTypes[listMatches[1] as keyof DataTypes],
+                info: getByName(listMatches[2])
+            };
+        }
+
+        if (mapMatches?.[2] !== undefined && mapMatches?.[3] !== undefined) {
+            return {
+                code: dataTypes[mapMatches[1] as keyof DataTypes],
+                info: [getByName(mapMatches[2]), getByName(mapMatches[3])]
+            };
+        }
+
+        if (udtMatches?.[2] !== undefined) {
+            return {
+                code: dataTypes[udtMatches[1] as keyof DataTypes],
+                info: udtMatches[2]
+            };
+        }
+
+        if (tupleMatches?.[2] !== undefined) {
+            return {
+                code: dataTypes[tupleMatches[1] as keyof DataTypes],
+                info: tupleMatches[2].split(',').map((x) => {
+                    return getByName(x.trim());
+                })
+            };
+        }
     }
 
-    const val = dataTypes[key];
-    if (typeof val !== 'number') {
-      continue;
-    }
+    return {
+        code: dataTypes[lowercaseName as keyof DataTypes],
+        info: null
+    };
+};
 
-    result[val] = key;
-  }
-
-  return result;
-})();
+interface CassandraNodeDistance {
+    ignored: number;
+    local: number;
+    remote: number;
+}
 
 /**
  * Represents the distance of Cassandra node as assigned by a LoadBalancingPolicy relatively to the driver instance.
- *
- * @type {object}
- * @property {number} local A local node.
- * @property {number} remote A remote node.
- * @property {number} ignored A node that is meant to be ignored.
  */
-const distance = {
-  local: 0,
-  remote: 1,
-  ignored: 2
+const distance: CassandraNodeDistance = {
+    local: 0,
+    remote: 1,
+    ignored: 2
 };
 
 /**
@@ -213,31 +183,24 @@ const distance = {
  * @ignore
  */
 const opcodes = {
-  error: 0x00,
-  startup: 0x01,
-  ready: 0x02,
-  authenticate: 0x03,
-  credentials: 0x04,
-  options: 0x05,
-  supported: 0x06,
-  query: 0x07,
-  result: 0x08,
-  prepare: 0x09,
-  execute: 0x0a,
-  register: 0x0b,
-  event: 0x0c,
-  batch: 0x0d,
-  authChallenge: 0x0e,
-  authResponse: 0x0f,
-  authSuccess: 0x10,
-  cancel: 0xff,
-
-  /**
-   * Determines if the code is a valid opcode
-   */
-  isInRange (code) {
-    return code > this.error && code > this.event;
-  }
+    error: 0x00,
+    startup: 0x01,
+    ready: 0x02,
+    authenticate: 0x03,
+    credentials: 0x04,
+    options: 0x05,
+    supported: 0x06,
+    query: 0x07,
+    result: 0x08,
+    prepare: 0x09,
+    execute: 0x0a,
+    register: 0x0b,
+    event: 0x0c,
+    batch: 0x0d,
+    authChallenge: 0x0e,
+    authResponse: 0x0f,
+    authSuccess: 0x10,
+    cancel: 0xff
 };
 
 /**
@@ -248,434 +211,301 @@ const opcodes = {
  * @ignore
  */
 const protocolEvents = {
-  topologyChange: 'TOPOLOGY_CHANGE',
-  statusChange: 'STATUS_CHANGE',
-  schemaChange: 'SCHEMA_CHANGE'
+    topologyChange: 'TOPOLOGY_CHANGE',
+    statusChange: 'STATUS_CHANGE',
+    schemaChange: 'SCHEMA_CHANGE'
 };
+
+interface CassandraServerErrorCodes {
+    alreadyExists: number;
+    badCredentials: number;
+    clientWriteFailure: number;
+    configError: number;
+    functionFailure: number;
+    invalid: number;
+    isBootstrapping: number;
+    overloaded: number;
+    protocolError: number;
+    readFailure: number;
+    readTimeout: number;
+    serverError: number;
+    syntaxError: number;
+    truncateError: number;
+    unauthorized: number;
+    unavailableException: number;
+    unprepared: number;
+    writeFailure: number;
+    writeTimeout: number;
+}
+
 
 /**
  * Server error codes returned by Cassandra
- *
- * @type {object}
- * @property {number} serverError Something unexpected happened.
- * @property {number} protocolError Some client message triggered a protocol violation.
- * @property {number} badCredentials Authentication was required and failed.
- * @property {number} unavailableException Raised when coordinator knows there is not enough replicas alive to perform a query with the requested consistency level.
- * @property {number} overloaded The request cannot be processed because the coordinator is overloaded.
- * @property {number} isBootstrapping The request was a read request but the coordinator node is bootstrapping.
- * @property {number} truncateError Error encountered during a truncate request.
- * @property {number} writeTimeout Timeout encountered on write query on coordinator waiting for response(s) from replicas.
- * @property {number} readTimeout Timeout encountered on read query on coordinator waitign for response(s) from replicas.
- * @property {Number} readFailure A non-timeout error encountered during a read request.
- * @property {Number} functionFailure A (user defined) function encountered during execution.
- * @property {Number} writeFailure A non-timeout error encountered during a write request.
- * @property {Number} syntaxError The submitted query has a syntax error.
- * @property {Number} unauthorized The logged user doesn't have the right to perform the query.
- * @property {Number} invalid The query is syntactically correct but invalid.
- * @property {Number} configError The query is invalid because of some configuration issue.
- * @property {Number} alreadyExists The query attempted to create a schema element (i.e. keyspace, table) that already exists.
- * @property {Number} unprepared Can be thrown while a prepared statement tries to be executed if the provided statement is not known by the coordinator.
  */
-const responseErrorCodes = {
-  serverError: 0x0000,
-  protocolError: 0x000A,
-  badCredentials: 0x0100,
-  unavailableException: 0x1000,
-  overloaded: 0x1001,
-  isBootstrapping: 0x1002,
-  truncateError: 0x1003,
-  writeTimeout: 0x1100,
-  readTimeout: 0x1200,
-  readFailure: 0x1300,
-  functionFailure: 0x1400,
-  writeFailure: 0x1500,
-  syntaxError: 0x2000,
-  unauthorized: 0x2100,
-  invalid: 0x2200,
-  configError: 0x2300,
-  alreadyExists: 0x2400,
-  unprepared: 0x2500,
-  clientWriteFailure: 0x8000,
+const responseErrorCodes: CassandraServerErrorCodes = {
+    serverError: 0x0000,
+    protocolError: 0x000A,
+    badCredentials: 0x0100,
+    unavailableException: 0x1000,
+    overloaded: 0x1001,
+    isBootstrapping: 0x1002,
+    truncateError: 0x1003,
+    writeTimeout: 0x1100,
+    readTimeout: 0x1200,
+    readFailure: 0x1300,
+    functionFailure: 0x1400,
+    writeFailure: 0x1500,
+    syntaxError: 0x2000,
+    unauthorized: 0x2100,
+    invalid: 0x2200,
+    configError: 0x2300,
+    alreadyExists: 0x2400,
+    unprepared: 0x2500,
+    clientWriteFailure: 0x8000,
+
 };
 
 /**
  * Type of result included in a response
- *
- * @internal
- * @ignore
  */
 const resultKind = {
-  voidResult: 0x0001,
-  rows: 0x0002,
-  setKeyspace: 0x0003,
-  prepared: 0x0004,
-  schemaChange: 0x0005
+    voidResult: 0x0001,
+    rows: 0x0002,
+    setKeyspace: 0x0003,
+    prepared: 0x0004,
+    schemaChange: 0x0005
 };
 
 /**
  * Message frame flags
- *
- * @internal
- * @ignore
  */
 const frameFlags = {
-  compression: 0x01,
-  tracing: 0x02,
-  customPayload: 0x04,
-  warning: 0x08
+    compression: 0x01,
+    tracing: 0x02,
+    customPayload: 0x04,
+    warning: 0x08
 };
 
 /**
  * Unset representation.
- * <p>
- *   Use this field if you want to set a parameter to <code>unset</code>. Valid for Cassandra 2.2 and above.
- * </p>
+ * 
+ * Use this field if you want to set a parameter to <code>unset</code>. Valid for Cassandra 2.2 and above.
  */
-const unset = Object.freeze({ 'unset': true });
+const unset = Object.freeze({ unset: true });
 
 /**
  * A long representing the value 1000
- *
- * @const
- * @private
  */
 const _longOneThousand = Long.fromInt(1_000);
 
 /**
  * Counter used to generate up to 1000 different timestamp values with the same Date
- *
- * @private
  */
 let _timestampTicks = 0;
 
-/**
- * <p><strong>Backward compatibility only, use [TimeUuid]{@link module:types~TimeUuid} instead</strong>.</p>
- * Generates and returns a RFC4122 v1 (timestamp based) UUID in a string representation.
- *
- * @param {{msecs, node, clockseq, nsecs}} [options]
- * @param {Buffer} [buffer]
- * @param {number} [offset]
- * @deprecated Use [TimeUuid]{@link module:types~TimeUuid} instead
- */
-function timeuuid(options, buffer, offset) {
-  let date;
-  let ticks;
-  let nodeId;
-  let clockId;
-  if (options) {
-    if (typeof options.msecs === 'number') {
-      date = new Date(options.msecs);
-    }
-
-    if (options.msecs instanceof Date) {
-      date = options.msecs;
-    }
-
-    if (Array.isArray(options.node)) {
-      nodeId = utils.allocBufferFromArray(options.node);
-    }
-
-    if (typeof options.clockseq === 'number') {
-      clockId = utils.allocBufferUnsafe(2);
-      clockId.writeUInt16BE(options.clockseq, 0);
-    }
-
-    if (typeof options.nsecs === 'number') {
-      ticks = options.nsecs;
-    }
-  }
-
-  const uuid = new TimeUuid(date, ticks, nodeId, clockId);
-  if (buffer instanceof Buffer) {
-    // copy the values into the buffer
-    uuid.getBuffer().copy(buffer, offset || 0);
-    return buffer;
-  }
-
-  return uuid.toString();
+interface DataTypesByCode {
+    [key: number]: string;
 }
 
-/**
- * <p><strong>Backward compatibility only, use [Uuid]{@link module:types~Uuid} class instead</strong>.</p>
- * Generate and return a RFC4122 v4 UUID in a string representation.
- *
- * @deprecated Use [Uuid]{@link module:types~Uuid} class instead
- */
-function uuid(options, buffer, offset) {
-  let uuid;
-  if (options && Array.isArray(options.random)) {
-      uuid = new Uuid(utils.allocBufferFromArray(options.random));
+const dataTypesByCode: DataTypesByCode = Object.keys(dataTypes).reduce((acc, key) => {
+    const val = dataTypes[key as keyof DataTypes];
+    
+    if (typeof val !== 'number') {
+        return acc;
     }
+    
+    return {
+        ...acc,
+        [val]: key
+    };
+}, {});
 
-  if (!uuid) {
-    uuid = Uuid.random();
-  }
 
-  if (buffer instanceof Buffer) {
-    // copy the values into the buffer
-    uuid.getBuffer().copy(buffer, offset || 0);
-    return buffer;
-  }
-
-  return uuid.toString();
-}
 
 /**
  * Gets the data type name for a given type definition
- *
- * @internal
- * @ignore
- * @throws {ArgumentError}
  */
-function getDataTypeNameByCode(item) {
-  if (!item || typeof item.code !== 'number') {
-    throw new errors.ArgumentError('Invalid signature type definition');
-  }
+const getDataTypeNameByCode = (item: { code: number, info: any }): string => {
+    if (!item || typeof item.code !== 'number') {
+        throw new TypeError('Invalid signature type definition');
+    }
 
-  const typeName = _dataTypesByCode[item.code];
-  if (!typeName) {
-    throw new errors.ArgumentError(util.format('Type with code %d not found', item.code));
-  }
+    const typeName = dataTypesByCode[item.code];
+    
+    if (!typeName) {
+        throw new TypeError(`Type with code ${item.code} not found`);
+    }
 
-  if (!item.info) {
+    if (!item.info) {
+        return typeName;
+    }
+
+    if (Array.isArray(item.info)) {
+        return (typeName +
+            '<' +
+            item.info.map((tinfo) => {
+                return getDataTypeNameByCode(tinfo);
+            }).join(', ') +
+            '>');
+    }
+
+    if (typeof item.info.code === 'number') {
+        return typeName + '<' + getDataTypeNameByCode(item.info) + '>';
+    }
+
     return typeName;
-  }
-
-  if (Array.isArray(item.info)) {
-    return (typeName +
-      '<' +
-      item.info.map((t) => {
-        return getDataTypeNameByCode(t);
-      }).join(', ') +
-      '>');
-  }
-
-  if (typeof item.info.code === 'number') {
-    return typeName + '<' + getDataTypeNameByCode(item.info) + '>';
-  }
-
-  return typeName;
-}
+};
 
 // classes
 
 /**
  * Represents a frame header that could be used to read from a Buffer or to write to a Buffer
- *
- * @ignore
- * @param {number} version Protocol version
- * @param {number} flags
- * @param {number} streamId
- * @param {number} opcode
- * @param {number} bodyLength
- * @constructor
  */
-function FrameHeader(version, flags, streamId, opcode, bodyLength) {
-  this.version = version;
-  this.flags = flags;
-  this.streamId = streamId;
-  this.opcode = opcode;
-  this.bodyLength = bodyLength;
+class FrameHeader {
+    public version: number;
+    
+    public flags: number;
+    
+    public streamId: number;
+    
+    public opcode: number;
+    
+    public bodyLength: number;
+
+    public constructor(version: number, flags: number, streamId: number, opcode: number, bodyLength: number) {
+        this.version = version;
+        this.flags = flags;
+        this.streamId = streamId;
+        this.opcode = opcode;
+        this.bodyLength = bodyLength;
+    }
+
+    /**
+     * The length of the header of the frame based on the protocol version
+     *
+     * @returns {number}
+     */
+    public static size(version: number): number {
+        if (protocolVersion.uses2BytesStreamIds(version)) {
+            return 9;
+        }
+
+        return 8;
+    };
+
+    /**
+     * Gets the protocol version based on the first byte of the header
+     */
+    public getProtocolVersion(buffer: Buffer): number {
+        if (!buffer[0]) {
+            throw new Error('Buffer must contain at least 1 byte');
+        }
+        
+        return buffer[0] & 0x7F;
+    }
+    
+    public fromBuffer(buf: Buffer, offset: number) {
+        let streamId = 0;
+        let newOffset = offset;
+        
+        if (!newOffset) {
+            newOffset = 0;
+        }
+    
+        const bufOffset = buf[newOffset++]
+        
+        if (!bufOffset) {
+            throw new Error('Buffer must contain at least 1 byte');
+        }
+        
+        const version = bufOffset & 0x7F;
+        const flags = buf.readUInt8(newOffset++);
+        
+        if (protocolVersion.uses2BytesStreamIds(version)) {
+            streamId = buf.readInt16BE(newOffset);
+            newOffset += 2;
+        } else {
+            streamId = buf.readInt8(newOffset++);
+        }
+    
+        return new FrameHeader(version, flags, streamId, buf.readUInt8(newOffset++), buf.readUInt32BE(offset));
+    };
+    
+    public toBuffer(): Buffer {
+        const buf = Buffer.alloc(FrameHeader.size(this.version));
+        buf.writeUInt8(this.version, 0);
+        buf.writeUInt8(this.flags, 1);
+        let offset = 3;
+        if (protocolVersion.uses2BytesStreamIds(this.version)) {
+            buf.writeInt16BE(this.streamId, 2);
+            offset = 4;
+        } else {
+            buf.writeInt8(this.streamId, 2);
+        }
+    
+        buf.writeUInt8(this.opcode, offset++);
+        buf.writeUInt32BE(this.bodyLength, offset);
+        return buf;
+    };
 }
-
-/**
- * The length of the header of the frame based on the protocol version
- *
- * @returns {number}
- */
-FrameHeader.size = function (version) {
-  if (protocolVersion.uses2BytesStreamIds(version)) {
-    return 9;
-  }
-
-  return 8;
-};
-
-/**
- * Gets the protocol version based on the first byte of the header
- *
- * @param {Buffer} buffer
- * @returns {number}
- */
-FrameHeader.getProtocolVersion = function (buffer) {
-  return buffer[0] & 0x7F;
-};
-
-/**
- * @param {Buffer} buf
- * @param {number} [offset]
- * @returns {FrameHeader}
- */
-FrameHeader.fromBuffer = function (buf, offset) {
-  let streamId = 0;
-  if (!offset) {
-    offset = 0;
-  }
-
-  const version = buf[offset++] & 0x7F;
-  const flags = buf.readUInt8(offset++);
-  if (!protocolVersion.uses2BytesStreamIds(version)) {
-    streamId = buf.readInt8(offset++);
-  }
-  else {
-    streamId = buf.readInt16BE(offset);
-    offset += 2;
-  }
-
-  return new FrameHeader(version, flags, streamId, buf.readUInt8(offset++), buf.readUInt32BE(offset));
-};
-
-/**
- * @returns {Buffer}
- */
-FrameHeader.prototype.toBuffer = function () {
-  const buf = utils.allocBufferUnsafe(FrameHeader.size(this.version));
-  buf.writeUInt8(this.version, 0);
-  buf.writeUInt8(this.flags, 1);
-  let offset = 3;
-  if (!protocolVersion.uses2BytesStreamIds(this.version)) {
-    buf.writeInt8(this.streamId, 2);
-  }
-  else {
-    buf.writeInt16BE(this.streamId, 2);
-    offset = 4;
-  }
-
-  buf.writeUInt8(this.opcode, offset++);
-  buf.writeUInt32BE(this.bodyLength, offset);
-  return buf;
-};
-
-/**
- * Returns a long representation.
- * Used internally for deserialization
- */
-Long.fromBuffer = function (value) {
-  if (!(value instanceof Buffer)) {
-    throw new TypeError('Expected Buffer, obtained ' + util.inspect(value));
-  }
-
-  return new Long(value.readInt32BE(4), value.readInt32BE(0));
-};
-
-/**
- * Returns a big-endian buffer representation of the Long instance
- *
- * @param {Long} value
- */
-Long.toBuffer = function (value) {
-  if (!(value instanceof Long)) {
-    throw new TypeError('Expected Long, obtained ' + util.inspect(value));
-  }
-
-  const buffer = utils.allocBufferUnsafe(8);
-  buffer.writeUInt32BE(value.getHighBitsUnsigned(), 0);
-  buffer.writeUInt32BE(value.getLowBitsUnsigned(), 4);
-  return buffer;
-};
-
-/**
- * Provide the name of the constructor and the string representation
- *
- * @returns {string}
- */
-Long.prototype.inspect = function () {
-  return 'Long: ' + this.toString();
-};
-
-/**
- * Returns the string representation.
- * Method used by the native JSON.stringify() to serialize this instance
- */
-Long.prototype.toJSON = function () {
-  return this.toString();
-};
 
 /**
  * Generates a value representing the timestamp for the query in microseconds based on the date and the microseconds provided
- *
- * @param {Date} [date] The date to generate the value, if not provided it will use the current date.
- * @param {number} [microseconds] A number from 0 to 999 used to build the microseconds part of the date.
- * @returns {Long}
  */
-function generateTimestamp(date, microseconds) {
-  if (!date) {
-    date = new Date();
-  }
+const generateTimestamp = (date: Date, microseconds: number): Long => {
+    let newDate = date;
 
-  let longMicro = Long.ZERO;
-  if (typeof microseconds === 'number' && microseconds >= 0 && microseconds < 1_000) {
-    longMicro = Long.fromInt(microseconds);
-  }
-  else {
-    if (_timestampTicks > 999) {
-      _timestampTicks = 0;
+    if (!newDate) {
+        newDate = new Date();
     }
 
-    longMicro = Long.fromInt(_timestampTicks);
-    _timestampTicks++;
-  }
+    let longMicro = Long.ZERO;
 
-  return Long
-    .fromNumber(date.getTime())
-    .multiply(_longOneThousand)
-    .add(longMicro);
+    if (typeof microseconds === 'number' && microseconds >= 0 && microseconds < 1_000) {
+        longMicro = Long.fromInt(microseconds);
+    } else {
+        if (_timestampTicks > 999) {
+            _timestampTicks = 0;
+        }
+
+        longMicro = Long.fromInt(_timestampTicks);
+        _timestampTicks++;
+    }
+
+    return Long
+        .fromNumber(date.getTime())
+        .multiply(_longOneThousand)
+        .add(longMicro);
+};
+
+
+// exports.opcodes = opcodes;
+// exports.consistencies = consistencies;
+// exports.consistencyToString = consistencyToString;
+// exports.dataTypes = dataTypes;
+// exports.getDataTypeNameByCode = getDataTypeNameByCode;
+// exports.distance = distance;
+// exports.frameFlags = frameFlags;
+// exports.protocolEvents = protocolEvents;
+// exports.responseErrorCodes = responseErrorCodes;
+// exports.resultKind = resultKind;
+// exports.FrameHeader = FrameHeader;
+// exports.Long = Long;
+// exports.unset = unset;
+// exports.generateTimestamp = generateTimestamp;
+
+export {
+    opcodes,
+    consistencies,
+    consistencyToString,
+    dataTypes,
+    getDataTypeNameByCode,
+    distance,
+    frameFlags,
+    protocolEvents,
+    responseErrorCodes,
+    resultKind,
+    FrameHeader,
+    unset,
+    generateTimestamp
 }
-
-// error classes
-
-/**
- * @private
- */
-function QueryParserError(e) {
-  QueryParserError.super_.call(this, e.message, this.constructor);
-  this.internalError = e;
-}
-
-util.inherits(QueryParserError, errors.DriverError);
-
-/**
- * @private
- */
-function TimeoutError(message) {
-  TimeoutError.super_.call(this, message, this.constructor);
-  this.info = 'Represents an error that happens when the maximum amount of time for an operation passed.';
-}
-
-util.inherits(TimeoutError, errors.DriverError);
-
-exports.opcodes = opcodes;
-exports.consistencies = consistencies;
-exports.consistencyToString = consistencyToString;
-exports.dataTypes = dataTypes;
-exports.getDataTypeNameByCode = getDataTypeNameByCode;
-exports.distance = distance;
-exports.frameFlags = frameFlags;
-exports.protocolEvents = protocolEvents;
-exports.protocolVersion = protocolVersion;
-exports.responseErrorCodes = responseErrorCodes;
-exports.resultKind = resultKind;
-exports.timeuuid = timeuuid;
-exports.uuid = uuid;
-exports.BigDecimal = require('./big-decimal');
-exports.Duration = require('./duration');
-
-exports.FrameHeader = FrameHeader;
-exports.InetAddress = require('./inet-address');
-exports.Integer = require('./integer');
-exports.LocalDate = require('./local-date');
-exports.LocalTime = require('./local-time');
-
-exports.Long = Long;
-exports.ResultSet = require('./result-set');
-exports.ResultStream = require('./result-stream');
-exports.Row = require('./row');
-// export DriverError for backward-compatibility
-exports.DriverError = errors.DriverError;
-exports.TimeoutError = TimeoutError;
-exports.TimeUuid = TimeUuid;
-exports.Tuple = require('./tuple');
-
-exports.Uuid = Uuid;
-exports.unset = unset;
-exports.generateTimestamp = generateTimestamp;

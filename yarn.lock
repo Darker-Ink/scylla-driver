@@ -971,6 +971,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/long@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "@types/long@npm:5.0.0"
+  dependencies:
+    long: "*"
+  checksum: 1483b703bd6257cff1c9921cdc80e36f83985bed1f7bf9a64919e29df0038c3eb5acc82b70cd0cf15e4fdd639f79976eed5f7f9053e8db152b21b9e5d202845c
+  languageName: node
+  linkType: hard
+
 "@types/mdast@npm:^3.0.0":
   version: 3.0.12
   resolution: "@types/mdast@npm:3.0.12"
@@ -4932,6 +4941,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"long@npm:*, long@npm:^5.2.3":
+  version: 5.2.3
+  resolution: "long@npm:5.2.3"
+  checksum: 885ede7c3de4facccbd2cacc6168bae3a02c3e836159ea4252c87b6e34d40af819824b2d4edce330bfb5c4d6e8ce3ec5864bdcf9473fa1f53a4f8225860e5897
+  languageName: node
+  linkType: hard
+
 "longest-streak@npm:^3.0.0":
   version: 3.1.0
   resolution: "longest-streak@npm:3.1.0"
@@ -6791,6 +6807,7 @@ __metadata:
   dependencies:
     "@commitlint/cli": ^17.7.1
     "@commitlint/config-angular": ^17.7.0
+    "@types/long": ^5.0.0
     "@types/node": ^20.6.0
     cross-env: ^7.0.3
     eslint: ^8.47.0
@@ -6798,6 +6815,7 @@ __metadata:
     eslint-formatter-pretty: ^5.0.0
     husky: ^8.0.3
     lint-staged: ^14.0.0
+    long: ^5.2.3
     prettier: ^3.0.2
     tsup: ^7.2.0
   languageName: unknown

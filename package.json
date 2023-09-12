@@ -6,6 +6,7 @@
 	"devDependencies": {
 		"@commitlint/cli": "^17.7.1",
 		"@commitlint/config-angular": "^17.7.0",
+		"@types/long": "^5.0.0",
 		"@types/node": "^20.6.0",
 		"cross-env": "^7.0.3",
 		"eslint": "^8.47.0",
@@ -53,5 +54,8 @@
 		"url": "https://github.com/Darker-Ink/scylla-driver.git"
 	},
 	"packageManager": "yarn@3.3.0",
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"long": "^5.2.3"
+	}
 }
