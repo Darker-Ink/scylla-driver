@@ -46,8 +46,8 @@ enum dataTypes {
 
 enum distance {
     local = 0,
-    remote,
-    ignored
+    remote = 1,
+    ignored = 2
 }
 
 enum responseErrorCodes {
@@ -71,6 +71,27 @@ enum responseErrorCodes {
     unprepared = 0x2500,
     clientWriteFailure = 0x8000
 }
+
+enum opcodes {
+    error = 0x00,
+    startup = 0x01,
+    ready = 0x02,
+    authenticate = 0x03,
+    credentials = 0x04,
+    options = 0x05,
+    supported = 0x06,
+    query = 0x07,
+    result = 0x08,
+    prepare = 0x09,
+    execute = 0x0a,
+    register = 0x0b,
+    event = 0x0c,
+    batch = 0x0d,
+    authChallenge = 0x0e,
+    authResponse = 0x0f,
+    authSuccess = 0x10,
+    cancel = 0xff
+};
 
 enum protocolVersion {
     v1 = 0x01,
@@ -174,6 +195,43 @@ const zeroLengthTypesSupported = new Set([
     dataTypes.blob
 ]);
 
+enum consistencyToString {
+    all = 'ALL',
+    any = 'ANY',
+    eachQuorum = 'EACH_QUORUM',
+    localOne = 'LOCAL_ONE',
+    localQuorum = 'LOCAL_QUORUM',
+    localSerial = 'LOCAL_SERIAL',
+    one = 'ONE',
+    quorum = 'QUORUM',
+    serial = 'SERIAL',
+    three = 'THREE',
+    two = 'TWO'
+}
+
+enum protocolEvents {
+    schemaChange = 'SCHEMA_CHANGE',
+    statusChange = 'STATUS_CHANGE',
+    topologyChange = 'TOPOLOGY_CHANGE'
+}
+
+enum resultKind {
+    voidResult = 0x0001,
+    rows = 0x0002,
+    setKeyspace = 0x0003,
+    prepared = 0x0004,
+    schemaChange = 0x0005
+}
+
+enum frameFlags {
+    compression = 0x01,
+    tracing = 0x02,
+    customPayload = 0x04,
+    warning = 0x08
+}
+
+const unset = Object.freeze({ unset: true });
+
 export {
     uuidRegex,
     buffers,
@@ -194,5 +252,12 @@ export {
     dataTypes,
     distance,
     responseErrorCodes,
-    protocolVersion
+    protocolVersion,
+    opcodes,
+    consistencyToString,
+    protocolEvents,
+    singleTypeNames,
+    resultKind,
+    frameFlags,
+    unset
 };
