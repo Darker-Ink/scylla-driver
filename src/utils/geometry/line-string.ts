@@ -9,10 +9,6 @@ class LineString extends Geometry {
   public constructor(points: Point[]) {
     super();
     
-    if (points.length === 1) {
-      throw new TypeError('LineString can be either empty or contain 2 or more points');
-    }
-    
     this.points = Object.freeze(points);
   }
   

@@ -1,4 +1,6 @@
+/* eslint-disable prefer-named-capture-group */
 import { Buffer } from 'node:buffer';
+import Long from 'long';
 
 enum consistencies {
     any = 0x00,
@@ -232,6 +234,51 @@ enum frameFlags {
 
 const unset = Object.freeze({ unset: true });
 
+const dateRegex =
+    /^[+-]?(\d{1,6})(?:-(\d{1,2}))?(?:-(\d{1,2}))?(?:T(\d{1,2}?)?(?::(\d{1,2}))?(?::(\d{1,2})(?:\.(\d{1,3}))?)?)?Z?$/;
+const multipleBoundariesRegex = /^\[(.+?) TO (.+)]$/;
+const standardRegex = /(\d+)(y|mo|w|d|h|s|ms|us|µs|ns|m)/gi;
+const iso8601Regex = /P((\d+)Y)?((\d+)M)?((\d+)D)?(T((\d+)H)?((\d+)M)?((\d+)S)?)?/;
+const iso8601WeekRegex = /P(\d+)W/;
+const iso8601AlternateRegex = /P(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/;
+
+const maxInt32 = 0x7FFFFFFF;
+const longOneThousand = Long.fromInt(1_000);
+const nanosPerMicro = longOneThousand;
+const nanosPerMilli = longOneThousand.multiply(nanosPerMicro);
+const nanosPerSecond = longOneThousand.multiply(nanosPerMilli);
+const nanosPerMinute = Long.fromInt(60).multiply(nanosPerSecond);
+const nanosPerHour = Long.fromInt(60).multiply(nanosPerMinute);
+const daysPerWeek = 7;
+const monthsPerYear = 12;
+
+
+enum dateRangeType {
+    // single value as in "2001-01-01"
+    singleValue = 0,
+    // closed range as in "[2001-01-01 TO 2001-01-31]"
+    closedRange = 1,
+    // open range high as in "[2001-01-01 TO *]"
+    openRangeHigh = 2,
+    // - 0x03 - open range low as in "[* TO 2001-01-01]"
+    openRangeLow = 3,
+    // - 0x04 - both ranges open as in "[* TO *]"
+    openBoth = 4,
+    // - 0x05 - single open range as in "[*]"
+    openSingle = 5
+};
+
+enum DateRangePrecision {
+    unbounded = -1,
+    year = 0,
+    month = 1,
+    day = 2,
+    hour = 3,
+    minute = 4,
+    second = 5,
+    millisecond = 6
+}
+
 export {
     uuidRegex,
     buffers,
@@ -259,5 +306,21 @@ export {
     singleTypeNames,
     resultKind,
     frameFlags,
-    unset
+    unset,
+    dateRegex,
+    multipleBoundariesRegex,
+    dateRangeType,
+    DateRangePrecision,
+    standardRegex,
+    iso8601Regex,
+    iso8601WeekRegex,
+    iso8601AlternateRegex,
+    maxInt32,
+    nanosPerMicro,
+    nanosPerMilli,
+    nanosPerSecond,
+    nanosPerMinute,
+    nanosPerHour,
+    daysPerWeek,
+    monthsPerYear
 };
