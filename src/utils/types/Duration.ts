@@ -5,14 +5,11 @@ import { monthsPerYear, nanosPerHour, nanosPerMicro, nanosPerMilli, nanosPerMinu
 import VIntCoding from "./VIntCoding.js";
 import { append, append64, parseIso8601AlternativeFormat, parseIso8601Format, parseIso8601WeekFormat, parseStandardFormat } from "./misc.js";
 
-
-// Reuse the same buffers that should perform slightly better than built-in buffer pool
 const reusableBuffers = {
     months: Buffer.alloc(9),
     days: Buffer.alloc(9),
     nanoseconds: Buffer.alloc(9)
 };
-
 
 class Duration {
     public months: number;
@@ -37,11 +34,6 @@ class Duration {
             this.nanoseconds.equals(other.nanoseconds);
     };
 
-    /**
-     * Serializes the duration and returns the representation of the value in bytes.
-     *
-     * @returns {Buffer}
-     */
     public toBuffer() {
         const lengthMonths = VIntCoding.writeVInt(Long.fromNumber(this.months), reusableBuffers.months);
         const lengthDays = VIntCoding.writeVInt(Long.fromNumber(this.days), reusableBuffers.days);
@@ -55,11 +47,6 @@ class Duration {
         return buffer;
     };
 
-    /**
-     * Returns the string representation of the value.
-     *
-     * @return {string}
-     */
     public toString() {
         let value = '';
        
@@ -115,8 +102,6 @@ class Duration {
         return parseStandardFormat(isNegative, source);
     };
 }
-
-
 
 export {
     Duration

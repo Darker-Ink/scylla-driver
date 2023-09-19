@@ -109,8 +109,6 @@ const getDataTypeNameByCode = (item: { code: number, info: any }): string => {
     return typeName;
 };
 
-// classes
-
 /**
  * Represents a frame header that could be used to read from a Buffer or to write to a Buffer
  */

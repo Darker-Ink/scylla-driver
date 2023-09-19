@@ -117,10 +117,7 @@ class DateRangeBound {
         }
 
         if (matches[7] !== undefined && matches[5] === undefined) {
-            // Due to a limitation in the regex, its possible to match dates like 2015T03:02.001, without the seconds
-            // portion but with the milliseconds specified.
-            throw new TypeError('String representation of the date contains the milliseconds portion but not the seconds: ' +
-                boundaryString);
+            throw new TypeError(`String representation of the date contains the milliseconds portion but not the seconds: ${boundaryString}`);
         }
 
         const builder = new BoundaryBuilder(boundaryString.startsWith('-'));
